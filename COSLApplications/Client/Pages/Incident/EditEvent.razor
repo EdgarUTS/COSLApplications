@@ -1,0 +1,583 @@
+﻿@page "/EditIncident/{CaseID}/{Version}"
+@page "/EditIncident/{CaseID}"
+@using COSLApplications.Shared.Models
+
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@using System.Text.Json
+@using COSLApplications.Client.Shared.Components;
+@using COSLApplications.Shared
+@using System;
+@using System.Collections.Generic;
+@using System.Linq;
+@using System.Net.Http.Headers;
+@using System.Net.NetworkInformation;
+@using System.Text;
+@using System.Threading.Tasks;
+
+@using Microsoft.Extensions.Logging;
+
+<h2>Event Editor</h2>
+<EditForm Model="@_case" OnValidSubmit="@HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+	<label style="color:red;background-color:yellow"> CASE ID:&lt; @_case.IncidentID &gt;</label>
+	<select @onchange="@VersionChanged">
+		@for (int x = _case.IncidentVersion; x >= 0; x--)
+		{
+			<option value="@x">Version @x </option>
+		}
+	</select>
+	<div class="tab">
+		<button style="@(tab1?"background-color:#808080;color:white;":"")" @onclick="(x=>DisplayTab(1))">Basic Info</button>
+		<button style="@(tab2?"background-color:#808080;color:white;":"")" @onclick="(x=>DisplayTab(2))">Details & Evidences</button>
+		<button style="@(tab3?"background-color:#808080;color:white;":"")" @onclick="(x=>DisplayTab(3))">Root cause & Correction</button>
+		<button style="@(tab4?"background-color:#808080;color:white;":"")" @onclick="(x=>DisplayTab(4))">Attache Files</button>
+		<button type="submit" style="background-color: #f44336;" @onclick="@Save">Update</button>
+	</div>
+	@if (tab1)
+	{
+		<div class="tabcontent">
+			<div class="row">
+				<table>
+					<tr>
+						<td width="450px">
+							<table>
+								<tr>
+									<td>
+										<CellString Enable=false size="400px" Label="Case ID*" @bind-Value="_case.IncidentID" ValidationFor="@(() => _case.IncidentID)" />
+									</td>
+									<td>
+										@*<CellInteger size="70px" Label="Version*" @bind-Value="_case.IncidentVersion" ValidationFor="@(() => _case.IncidentVersion)" />*@
+									</td>
+								</tr>
+							</table>
+						</td>
+						<td width="600px">
+							<table>
+								<tr>
+									<td width="270px">
+										<CellDate size="230px" Label="Event Time*" @bind-Value="_case.IncidentTime" ValidationFor="@(() => _case.IncidentTime)" />
+									</td>
+									<td width="250px">
+										<CellDate size="230px" Label="Report Time*" @bind-Value="_case.ReportTime" ValidationFor="@(() => _case.ReportTime)" />
+									</td>
+								</tr>
+							</table>
+						</td>
+						<td>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td width="205px">
+										<div class="form-control-wrapper">
+											<div class="col-md-6">
+												<div class="form-group">
+													<label for="status" @*class="col-sm-2 col-form-label" *@ style="width:160px;">
+														Current Status
+													</label>
+													<InputSelect id="status" onchange="@inputNew(1)" @bind-Value="@_case.CurrentStatus" class="form-control" style="@newColor1">
+														@foreach (CaseStatus dept in Enum.GetValues(typeof(CaseStatus)))
+														{
+															<option value="@dept">@(new EnumDisplayName(dept).Name)</option>
+														}
+													</InputSelect>
+												</div>
+											</div>
+										</div>
+									</td>
+									<td style="width:100px;">
+										<div class="form-control-wrapper">
+											<div class="col-md-6">
+												<div class="form-group">
+													<label for="levelclass" @*class="col-sm-2 col-form-label" *@ style="width:150px;">
+														Incident Class
+													</label>
+													<InputSelect id="levelclass" onchange="@inputNew(2)" @bind-Value="@_case.FinalIncidentClass" class="form-control" style="@newColor2">
+														@foreach (IncidentClass dept in Enum.GetValues(typeof(IncidentClass)))
+														{
+															<option value="@dept">@(new EnumDisplayName(dept).Name)</option>
+														}
+													</InputSelect>
+												</div>
+											</div>
+										</div>
+									</td>
+								</tr>
+							</table>
+						</td>
+						<td>
+							<table>
+								<tr>
+									<td width="140px">
+										<div class="form-control-wrapper">
+											<div class="col-md-6">
+												<div class="form-group">
+													<label for="level" style="width:120px;">
+														Incident Level
+													</label>
+													<InputSelect id="level" onchange="@inputNew(3)" @bind-Value="@_case.FinalLevel" class="form-control" style="@newColor3">
+														@foreach (IncidentLevel dept in Enum.GetValues(typeof(IncidentLevel)))
+														{
+															<option value="@dept">@(new EnumDisplayName(dept).Name)</option>
+														}
+													</InputSelect>
+												</div>
+											</div>
+										</div>
+									</td>
+									<td>
+										<CellString size="360px" Label="Report Person & Contact" @bind-Value="_case.ReportPerson" ValidationFor="@(() => _case.ReportPerson)" />
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td width="205px">
+										<CellInteger size="195px" Label="NPT Hours" @bind-Value="_case.NPTLost" ValidationFor="@(() => _case.NPTLost)" />
+									</td>
+									<td>
+										<CellInteger size="195px" Label="NPT Cost" @bind-Value="_case.NPTCost" ValidationFor="@(() => _case.NPTCost)" />
+									</td>
+								</tr>
+							</table>
+						</td>
+						<td>
+							<table>
+								<tr>
+									<td width="210px">
+										<CellString size="200px" Label="Ops. Site*" @bind-Value="_case.OpsSite" ValidationFor="@(() => _case.OpsSite)" />
+									</td>
+									<td width="210px">
+										<CellString size="200px" Label="Field" @bind-Value="_case.Field" ValidationFor="@(() => _case.Field)" />
+									</td>
+									<td>
+										<CellString size="80px" Label="Country" @bind-Value="_case.Country" ValidationFor="@(() => _case.Country)" />
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<CellString size="400px" Label="Customer*" @bind-Value="_case.Customer" ValidationFor="@(() => _case.Customer)" />
+						</td>
+						<td rowspan="2">
+							<CellText trow=4 size="500px" Label="Summary*" @bind-Value="_case.Abstract" ValidationFor="@(() => _case.Abstract)" />
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td>
+										<CellString size="250px" Label="Customer Rep" @bind-Value="_case.CustomerRep" ValidationFor="@(() => _case.CustomerRep)" />
+									</td>
+									<td>
+										<CellString size="145px" Label="Phone/Email" @bind-Value="_case.CustomerRepContact" ValidationFor="@(() => _case.CustomerRepContact)" />
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td colspan="2">
+										<CellString size="400px" Label="Contractor*" @bind-Value="_case.Contractor" ValidationFor="@(() => _case.Contractor)" />
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<CellString size="250px" Label="Contractor Rep" @bind-Value="_case.ContractorManager" ValidationFor="@(() => _case.ContractorManager)" />
+									</td>
+									<td>
+										<CellString size="145px" Label="Phone/Email" @bind-Value="_case.ContractorManagerContact" ValidationFor="@(() => _case.ContractorManagerContact)" />
+									</td>
+								</tr>
+							</table>
+						</td>
+						<td>
+							<table>
+								<tr>
+									<td>
+										<CellString size="300px" Label="Site Manager" @bind-Value="_case.FieldManagers" ValidationFor="@(() => _case.FieldManagers)" />
+									</td>
+									<td>
+										<CellString size="200px" Label="Contact Info" @bind-Value="_case.FieldManagerContact" ValidationFor="@(() => _case.FieldManagerContact)" />
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<CellString size="300px" Label="Field HSE" @bind-Value="_case.FieldHSE" ValidationFor="@(() => _case.FieldHSE)" />
+									</td>
+									<td>
+										<CellString size="200px" Label="HSE Contact" @bind-Value="_case.FieldHSEContact" ValidationFor="@(() => _case.FieldHSEContact)" />
+									</td>
+								</tr>
+							</table>
+
+						</td>
+					</tr>
+					@*<CellInterge size="@defaultWidth" Label="Incident Level" @bind-Value="_case.FinalLevel" ValidationFor="@(() => _case.FinalLevel)" />
+				<CellString size="@defaultWidth" Label="Incident Class" @bind-Value="_case.FinalIncidentClass" ValidationFor="@(() => _case.FinalIncidentClass)" />
+				<CellString size="@defaultWidth" Label="Status" @bind-Value="_case.CurrentStutas" ValidationFor="@(() => _case.CurrentStutas)" />
+				*@
+					<tr>
+						<td>
+							<CellString size="400px" Label="Weather Condition" @bind-Value="_case.WeatherCondition" ValidationFor="@(() => _case.WeatherCondition)" />
+						</td>
+						<td>
+							<CellString size="500px" Label="Working Site Condition" @bind-Value="_case.SiteCondition" ValidationFor="@(() => _case.SiteCondition)" />
+						</td>
+					</tr>
+
+				</table>
+			</div>
+		</div>
+	}
+	@if (tab2)
+	{
+		<div class="tabcontent">
+			<div class="row">
+				<CellText trow=5 size="@defaultWidth" Label="Discription*" @bind-Value="caseDetails.Discription" ValidationFor="@(() => caseDetails.Discription)" />
+				<CellText trow=5 size="@defaultWidth" Label="Immediate Action*" @bind-Value="caseDetails.ImmediateAction" ValidationFor="@(() => caseDetails.ImmediateAction)" />
+				@*EvidenceDoc list*@
+			</div>
+		</div>
+	}
+	@if (tab3)
+	{
+		<div class="tabcontent">
+			<div class="row">
+				<table>
+					<tr>
+						<td>
+							<CellText trow=5 size="@defaultWidth" Label="Analyzation" @bind-Value="caseDetails.Analyzation" ValidationFor="@(() => caseDetails.Analyzation)" />
+							<CellText trow=5 size="@defaultWidth" Label="Root Cause" @bind-Value="caseDetails.RootCause" ValidationFor="@(() => caseDetails.RootCause)" />
+						</td>
+						<td>
+							<CellText trow=5 size="@defaultWidth" Label="Correction" @bind-Value="caseDetails.Correction" ValidationFor="@(() => caseDetails.Correction)" />
+							<CellText trow=5 size="@defaultWidth" Label="FellowUp" @bind-Value="caseDetails.FellowUp" ValidationFor="@(() => caseDetails.FellowUp)" />
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2">
+							<CellString size="600px" Label="Approved By" @bind-Value="caseDetails.Approved" ValidationFor="@(() => caseDetails.Approved)" />
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	}
+	@if (tab4)
+	{
+		<table>
+			<tr>
+				<td>
+					<label>Upload file description:</label>
+				</td>
+				<td>
+					<input form="UserID" class="form-control" @bind="@fileDescription" />
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<label for="avatar">Choose Upload File(s):</label>
+				</td>
+				<td>
+					<InputFile OnChange="@FileSelected" multiple />
+				</td>
+			</tr>
+		</table>
+
+		@if (isLoading)
+		{
+			<p>Uploading...</p>
+		}
+		@if (evidentDocList.Count > 0)
+		{
+			<table style="border: 1px solid black;">
+				<thead>
+					<tr style="border: 1px solid black;">
+						<th style="border: 1px solid black;">File Name</th>
+						<th style="border: 1px solid black;">Description</th>
+
+						<th style="border: 1px solid black;">Who Upload</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (EvidenceDoc doc in evidentDocList)
+					{
+						<tr style="border: 1px solid black;">
+							<td style="border: 1px solid black;">
+								<a href="@(@doc.LinkAddress+@doc.FileOnServer)" />@doc.FileName
+							</td>
+							<td style="border: 1px solid black;">@doc.description</td>
+
+							<td style="border: 1px solid black;">@doc.Supplier</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+	<div class="row">
+		<div class="col-md-4">
+			<div class="form-group">
+				@*<input type="button" class="btn btn-primary" @onclick="@Save" value="Save" />*@
+				<button type="button" @onclick="@Save">Update</button>
+				<input type="button" class="btn" @onclick="@Cancel" value="Cancel" />
+			</div>
+		</div>
+	</div>
+</EditForm>
+
+@code {
+	[Parameter] public string? CaseID { get; set; }
+	[Parameter] public string? Version { get; set; }
+
+	private string? fileDescription { get; set; }
+	HSEIncidentsModel? _case = new();
+	HSEIncidentsModel? _case_O = new();
+	IncidentsDetails? caseDetails = new();
+	IncidentsDetails? caseDetails_O = new();
+	List<EvidenceDoc>? evidentDocList = new();
+	private bool disab;
+	EvidenceDoc evidentDoc = new();
+	private bool tab1 = true;
+	private bool tab2 = false;
+	private bool tab3 = false;
+	private bool tab4 = false;
+	private string? defaultWidth;
+	//private string uniqueIID = "";
+	private bool enableTab = false;
+	private class tempFile
+	{
+		public EvidenceDoc evidentDoc;
+		public InputFileChangeEventArgs fileContent;
+		public tempFile(EvidenceDoc e, InputFileChangeEventArgs f)
+		{
+			evidentDoc = e;
+			fileContent = f;
+		}
+	}
+
+	private bool upload;
+
+	private string? newColor3;
+	private string? newColor2;
+	private string? newColor1;
+	private IncidentLevel oldValue3;
+	private CaseStatus oldValue1;
+	private IncidentClass oldValue2;
+
+	private long maxFileSize = 1024 * 1024 * 20;
+	private int maxAllowedFiles = 10;
+	private bool isLoading;
+
+	private object inputNew(int n)
+	{
+		if (oldValue2 != _case.FinalIncidentClass)
+		{
+			newColor2 = "width:120px;background-color:#eaf0c5;";
+		}
+
+		if (oldValue1 != _case.CurrentStatus)
+		{
+			newColor1 = "width:120px;background-color:#eaf0c5;";
+		}
+
+		if (oldValue3 != _case.FinalLevel)
+		{
+			newColor3 = "width:120px;background-color:#eaf0c5;";
+		}
+
+		return null;
+	}
+
+	private async void FileSelected(InputFileChangeEventArgs e)
+	{
+		using var content = new MultipartFormDataContent();
+		evidentDoc.description = fileDescription;
+		foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+		{
+			EvidenceDoc ev = new EvidenceDoc();
+			ev.FileName = file.Name;
+			ev.description = fileDescription;
+			evidentDocList.Add(ev);
+
+			StreamContent fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
+
+			fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+			content.Add(
+				content: fileContent,
+				name: "\"files\"",
+				fileName: file.Name);
+		}
+		try
+		{
+			HttpResponseMessage response = await Http.PostAsync("api/Files", content);
+			if (response.IsSuccessStatusCode)
+			{
+				List<UploadResult> results = await response.Content.ReadFromJsonAsync<List<UploadResult>>();
+				foreach (UploadResult result in results)
+				{
+					EvidenceDoc tid = new();
+					tid.HSEIncidentsModelId = _case.Id;
+					tid.IncidentID = _case.IncidentID;
+					tid.IncidentVersion = _case.IncidentVersion;
+					tid.Supplier = "???";
+					tid.LinkAddress = "///";
+					tid.FileName = result.FileName;
+					tid.description = fileDescription;
+					tid.FileOnServer = result.StoredFileName;
+
+					response = await Http.PostAsJsonAsync("api/Incident/SaveFile", @tid);
+					EvidenceDoc fileResponse = await response.Content.ReadFromJsonAsync<EvidenceDoc>();
+				}
+			}
+		}
+		catch (Exception eee)
+		{
+			Console.WriteLine(eee.Message);
+		}
+	}
+	protected async void VersionChanged(ChangeEventArgs e)
+	{
+		string version = e.Value.ToString();
+		caseDetails = await Http.GetFromJsonAsync<IncidentsDetails>("api/Incident/DET/" + _case.Id + "/" + version);
+		StateHasChanged();
+
+	}
+	private void DisplayTab(int TabNumber)
+	{
+		switch (TabNumber)
+		{
+			case 1:
+				this.tab1 = true;
+				this.tab2 = false;
+				this.tab3 = false;
+				this.tab4 = false;
+				break;
+			case 2:
+				this.tab1 = false;
+				this.tab2 = true;
+				this.tab3 = false; this.tab4 = false;
+				break;
+			case 3:
+				this.tab1 = false;
+				this.tab2 = false;
+				this.tab3 = true; this.tab4 = false;
+				break;
+			case 4:
+				this.tab1 = false;
+				this.tab2 = false;
+				this.tab3 = false; this.tab4 = true;
+				break;
+		}
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		disab = false;
+		if (Version is null) Version = "0";
+
+		newColor1 = "width:120px;background-color:#e9eef7;";
+		newColor2 = "width:120px;background-color:#e9eef7;";
+		newColor3 = "width:120px;background-color:#e9eef7;";
+		defaultWidth = "500px";
+		_case = await Http.GetFromJsonAsync<HSEIncidentsModel>("api/Incident/HSE/" + CaseID);
+		_case_O = _case.ShallowCopy();
+
+		oldValue3 = _case.FinalLevel;
+		oldValue1 = _case.CurrentStatus;
+		oldValue2 = _case.FinalIncidentClass;
+
+		try
+		{
+			caseDetails = await Http.GetFromJsonAsync<IncidentsDetails>("api/Incident/DET/" + CaseID + "/" + Version);
+			caseDetails_O = caseDetails.ShallowCopy();
+		}
+		catch (Exception e)
+		{
+		}
+		try
+		{
+			evidentDocList = await Http.GetFromJsonAsync<List<EvidenceDoc>>("api/Incident/DOC/" + CaseID);
+		}
+		catch (Exception e)
+		{
+
+		}
+	}
+
+	protected async Task Save()
+	{
+		try
+		{
+			if (_case != _case_O)// if main part changed
+			{
+				if (caseDetails != caseDetails_O)//if details changed
+				{
+					_case.IncidentVersion++;
+					caseDetails.IncidentVersion = _case.IncidentVersion;
+					caseDetails.Status = _case.CurrentStatus;
+					caseDetails.IncidentID = _case.IncidentID;
+
+					caseDetails.UpdateBy = _case.LastUpdateBy;
+
+					HttpResponseMessage response1 = await Http.PostAsJsonAsync("api/Incident/DET", @caseDetails);
+					caseDetails_O = new();
+					caseDetails_O = await response1.Content.ReadFromJsonAsync<IncidentsDetails>();
+					caseDetails = caseDetails_O.ShallowCopy();
+				}
+				HttpResponseMessage response = await Http.PutAsJsonAsync("api/Incident/" + _case.Id.ToString(), @_case);
+				_case_O = _case.ShallowCopy();
+			}
+			else
+			{
+				if (caseDetails != caseDetails_O)
+				{
+					_case.IncidentVersion++;
+					caseDetails.IncidentVersion = _case.IncidentVersion;
+					caseDetails.Status = _case.CurrentStatus;
+					caseDetails.IncidentID = _case.IncidentID;
+
+					caseDetails.UpdateBy = _case.LastUpdateBy;
+
+					HttpResponseMessage response1 = await Http.PostAsJsonAsync("api/Incident/DET", @caseDetails);
+					caseDetails_O = new();
+					caseDetails_O = await response1.Content.ReadFromJsonAsync<IncidentsDetails>();
+					caseDetails = caseDetails_O.ShallowCopy();
+					HttpResponseMessage response = await Http.PutAsJsonAsync("api/Incident/" + _case.Id.ToString(), @_case);
+					_case_O = _case.ShallowCopy();
+				}
+			}
+			await JsRuntime.InvokeVoidAsync("alert", "Update Successfully!");
+			NavigationManager.NavigateTo("ListIncident");
+
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e.Message);
+		}
+	}
+	void Cancel()
+	{
+		NavigationManager.NavigateTo("ListIncident");
+	}
+	private async void HandleValidSubmit()
+	{
+	}
+}

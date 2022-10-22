@@ -1,0 +1,50 @@
+﻿@using System.Linq.Expressions
+
+@inherits InputBase<string>
+
+<div class="form-control-wrapper">
+	<div class="col-md-6">
+		<div class="form-group">
+			@if (!string.IsNullOrWhiteSpace(Label))
+			{
+				<label for="@Id">@Label</label>
+			}
+			@if (Enable)
+			{
+				<input type="text" oninput="@inputNew" class="form-control @CssClass" style="width:@size;background-color: @newColor;" id="@Id" @bind="@CurrentValue" @onblur="@onblur" />
+			}else{
+				<input type="text" oninput="@inputNew" disabled class="form-control @CssClass" style="width:@size;background-color: @newColor;" id="@Id" @bind="@CurrentValue" @onblur="@onblur" />
+
+			}
+			@if (ValidationFor is not null)
+			{
+				<div class="form-control-validation">
+					<ValidationMessage For="@ValidationFor" />
+				</div>
+			}
+		</div>
+	</div>
+</div>
+
+@code {
+
+	[Parameter, EditorRequired] public Expression<Func<string>> ValidationFor { get; set; } = default!;
+	[Parameter] public string? Id { get; set; }
+	[Parameter] public string? Label { get; set; }
+	[Parameter] public string? size { get; set; } = "220px"; 
+	[Parameter] public bool Enable { get; set; } = true;
+	[Parameter] public EventCallback onblur { get; set; }
+	private string newColor;
+	protected void inputNew(){
+		newColor = "#eaf0c5";
+	}
+	protected override async Task OnInitializedAsync(){
+		newColor = "#e9eef7";
+	}
+	protected override bool TryParseValueFromString(string? value, out string result, out string validationErrorMessage)
+	{
+		result = value;
+		validationErrorMessage = null;
+		return true;
+	}
+}

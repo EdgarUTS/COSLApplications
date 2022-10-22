@@ -1,0 +1,80 @@
+﻿@page "/ListIncident"
+@using COSLApplications.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient _httpClient
+@using COSLApplications.Shared
+<h1>Incident List</h1>
+<div>
+	<a href="/addIncident">New Report</a>
+	@if (caseList != null)
+	{
+		<table class="table-bordered">
+			<thead>
+				<tr>
+					<th width="120px">Incident Date</th>
+					<th width="120px">Incident ID</th>
+					<th width="200px">Summary</th>
+					<th width="80px">Status</th>
+					<th width="80px">Class</th>
+					<th width="50px">Level</th>
+					<th width="200px">Customer</th>
+					<th width="90px">Action</th>
+				</tr>
+			</thead>
+			@if (Loading == 1)
+			{
+				<tbody>
+					@foreach (var p in caseList)
+					{
+						<tr>
+							<td> @p.IncidentTime.ToString("yyyy-MMM-dd HH:")</td>
+							<td><a href="/DetailsIncident/@p.Id">@p.IncidentID</a></td>
+							<td>@p.Abstract</td>
+							<td>@(
+							new EnumDisplayName(@p.CurrentStatus).Name
+							)</td>
+							<td>@(
+							new EnumDisplayName(@p.FinalIncidentClass).Name
+							)</td>
+							<td>@(
+							new EnumDisplayName(@p.FinalLevel).Name
+							)</td>
+							<td>@p.Customer</td>
+							<td>
+								<a href="/EditIncident/@p.Id">Edit</a> |
+								<a href="/DetailsIncident/Delete/@p.Id">Delete</a>
+							</td>
+						</tr>
+					}
+				</tbody>
+			}
+			else if (Loading == 0)
+			{
+				<tr><td>Loading...</td></tr>
+			}
+			else if (Loading == 2)
+			{
+				<tr><td>Loading Error</td></tr>
+			}
+		</table>
+	}
+</div>
+@code {
+	List<HSEIncidentsModel>? caseList = new List<HSEIncidentsModel>();
+	private int Loading;
+	protected override async Task OnInitializedAsync()
+	{
+		Loading = 0;
+		try{
+			var response = await _httpClient.GetAsync("api/Incident");
+			response.EnsureSuccessStatusCode();
+			caseList = await response.Content.ReadFromJsonAsync<List<HSEIncidentsModel>>();
+			Loading = 1;
+		}
+		catch(Exception e){
+			Loading = 2;
+			Console.WriteLine(e.Message);
+		}
+		//caseList = await response.Content.ReadFromJsonAsync<List<HSEIncidentsModel>>();
+	}
+}

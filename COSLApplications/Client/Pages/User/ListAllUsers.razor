@@ -1,0 +1,67 @@
+﻿@page "/ListUsers"
+@using COSLApplications.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient _httpClient
+
+<h1>Personal Detail</h1>
+<div>
+    <a href="/adduser"> Create New Person</a>
+    @if (userList != null)
+    {
+        <table class="table-bordered">
+            <thead>
+                <tr>
+                    <th width="30%">Name</th>
+                    <th width="20%">Email</th>
+                    <th width="20%">Mobile No</th>
+                    <th width="30%">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (loading == 1)
+                {
+                    @foreach (var p in userList)
+                    {
+                        <tr>
+                            <td>
+                                @p.FirstName @p.LastName
+                            </td>
+                            <td>@p.Email</td>
+                            <td>@p.PhoneNumber</td>
+                            <td>
+                                <a href="/EditUser/@p.Id">Edit</a> |
+                                <a href="/DeleteUser/@p.Id">Delete</a>
+                            </td>
+                        </tr>
+                    }
+
+                }
+                else if (loading == 0)
+                {
+                    <tr><td>Loading...</td></tr>
+                }
+                else if (loading == 2)
+                {
+                    <tr><td>Loading Error</td></tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+@code {
+    List<UserModel>? userList = new List<UserModel>();
+    private int loading;
+    protected override async Task OnInitializedAsync()
+    {
+        loading = 0;
+        var response = await _httpClient.GetAsync("api/User");
+        try{
+            response.EnsureSuccessStatusCode();
+        }catch(Exception e){
+            loading = 2;
+            Console.WriteLine(e.Message);
+        }
+        userList = await response.Content.ReadFromJsonAsync<List<UserModel>>();
+        if (loading == 0) loading = 1;
+    }
+}

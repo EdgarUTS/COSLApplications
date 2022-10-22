@@ -1,0 +1,129 @@
+﻿@page "/EditUser/{Id}"
+@using COSLApplications.Shared.Models
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@using COSLApplications.Client.Shared.Components
+
+<h2>Edit User</h2>
+<div class="row">
+	<div class="row">
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="UserID"> User ID*</label>
+				<label for="active">( Active</label><input type="checkbox" form="active" @bind="@user.IsActive" /><label>)</label>
+				<input form="UserID" class="form-control" @bind="@user.UserID" disabled />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="FirstName"> First Name *</label>
+				<input form="FirstName" class="form-control" @bind="@user.FirstName" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="LastName"> Last Name *</label>
+				<input form="LastName" class="form-control" @bind="@user.LastName" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="Email"> Email *</label>
+				<input form="Email" class="form-control" @bind="@user.Email" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="PhoneNumber"> Phone # *</label>
+				<input form="PhoneNumber" class="form-control" @bind="@user.PhoneNumber" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="Company"> Company # *</label>
+				<input form="company" class="form-control" @bind="@user.Company" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="address"> Address # *</label>
+				<input form="address" class="form-control" @bind="@user.Address" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="City"> City *</label>
+				<input form="City" class="form-control" @bind="@user.City" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="Region"> Region *</label>
+				<input form="Region" class="form-control" @bind="@user.Region" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="Department"> Department *</label>
+				<input form="Department" class="form-control" @bind="@user.Department" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<CustomLabel TItem="UserModel" aspfor="@nameof(UserModel.CreatedDate)"></CustomLabel>
+				<input type="datetime-local" form="date" class="form-control" @bind="@user.CreatedDate" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="position"> Position *</label>
+				<input form="position" class="form-control" @bind="@user.Position" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="group"> IT Group *</label>
+				<input type="itgroup" form="date" class="form-control" @bind="@user.ItGroup" />
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="form-group">
+				<label for="office"> Office Location *</label>
+				<input form="office" class="form-control" @bind="@user.OfficePosition" />
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-4">
+		<div class="form-group">
+			<input type="button" class="btn btn-primary" @onclick="@Save" value="Save" />
+			<input type="button" class="btn" @onclick="@Cancel" value="Cancel" />
+		</div>
+	</div>
+</div>
+@code {
+	[Parameter]
+	public string Id { get; set; }
+	UserModel user = new UserModel();
+	protected override async Task OnInitializedAsync()
+	{
+		user = await Http.GetFromJsonAsync<UserModel>("api/User/" + Id);
+	}
+	protected async Task Save()
+	{
+		var response = await Http.PutAsJsonAsync("api/User/" + Id, @user);
+		bool personResponse = await response.Content.ReadFromJsonAsync<bool>();
+		if (personResponse)
+		{
+			await JsRuntime.InvokeVoidAsync("alert", "Updated Successfully!");
+			NavigationManager.NavigateTo("ListUsers");
+		}
+	}
+	void Cancel()
+	{
+		NavigationManager.NavigateTo("ListUsers");
+	}
+}

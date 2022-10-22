@@ -1,0 +1,54 @@
+﻿@using System.Linq.Expressions
+@using COSLApplications.Shared
+@inherits InputBase<string>
+
+<div class="form-control-wrapper">
+	<div class="col-md-6">
+		<div class="form-group">
+			@if (!string.IsNullOrWhiteSpace(Label))
+			{
+				<label for="@Id">@Label</label>
+			}
+			<select class="form-control @CssClass" style="width:@size;" id="@Id" @bind="@CurrentValue" @onblur="@onblur">	
+				@foreach (Enum dept in Enum.GetValues(selections))
+				{
+					<option value="@dept">@(new EnumDisplayName(dept).Name)</option>
+				}
+			</select>
+
+			<textarea rows="@trow" class="form-control @CssClass" style="width:@size;" id="@Id" @bind="@CurrentValue" @onblur="@onblur" />
+			@if (ValidationFor is not null)
+			{
+				<div class="form-control-validation">
+					<ValidationMessage For="@ValidationFor" />
+				</div>
+			}
+		</div>
+	</div>
+</div>
+
+@code {
+
+	[Parameter, EditorRequired] public Expression<Func<string>> ValidationFor { get; set; } = default!;
+	[Parameter] public string? Id { get; set; }
+	[Parameter] public string? Label { get; set; }
+	[Parameter] public int? trow { get; set; } = 3;
+	[Parameter] public string? size { get; set; } = "220px";
+	[Parameter] public Type ? selections { get; set; } 
+
+	[Parameter] public EventCallback onblur { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+
+		//trow = 3;
+		//tcol = 30;
+	}
+	protected override bool TryParseValueFromString(string? value, out string result, out string validationErrorMessage)
+	{
+		result = value;
+		validationErrorMessage = null;
+		return true;
+	}
+}
+
